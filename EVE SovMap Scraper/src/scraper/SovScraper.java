@@ -75,7 +75,7 @@ public class SovScraper
 					
 						System.out.println(imageURL);
 						BufferedImage sovImage = null;
-						BufferedImage sovImage = ImageIO.read(imageURL);
+						sovImage = ImageIO.read(imageURL);
 
 						FileOutputStream fos = new FileOutputStream(
 								"C:/Users/Will/Documents/Eclipse/git/EVE SovMap Scraper/Output/" + uniqueImageCode);
