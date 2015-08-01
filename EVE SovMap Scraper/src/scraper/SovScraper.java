@@ -9,15 +9,27 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Timer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
+
+import com.objectplanet.image.PngEncoder;
 
 public class SovScraper
 {
 
-	String BASE_URL = "http://dl.eve-files.com/media/corp/verite/";
+	String BASE_URL = "http://go-dl1.eve-files.com/media/corp/verite/";
+	BufferedImage sovImage = null;
+	ExecutorService executorService = Executors.newCachedThreadPool();
+	URL imageURL = null;
+	PngEncoder encoder = new PngEncoder();
 
 	int year;
 	int month;
@@ -26,69 +38,104 @@ public class SovScraper
 	public static void main(String[] args)
 	{
 		SovScraper sovScraper = new SovScraper();
-		sovScraper.scrapeImages();
+		try
+		{
+			sovScraper.scrapeImages();
+			sovScraper.waitForImages();
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 
-	private void scrapeImages()
+	private void scrapeImages() throws IOException
 	{
 		for (year = 2008; year < 2009; year++)
 		{
 			for (month = 01; month < 13; month++)
 			{
-				for (day = 01; month < 32; day++)
+				for (day = 01; day < 32; day++)
 				{
-					URL imageURL = null;
-					String uniqueImageCode = String.format("%04d", year) + String.format("%02d", month)
-							+ String.format("%02d", day) + ".png";
-					try
+					String uniqueImageCode = readImageFromUrl();
+					if (uniqueImageCode != null)
 					{
-						imageURL = new URL(BASE_URL + uniqueImageCode);
-					} catch (MalformedURLException e2)
-					{
-						e2.printStackTrace();
-						break;
-					}
-
-//					InputStream in = null;
-//					try
-//					{
-//						in = new BufferedInputStream(imageURL.openStream());
-//					} catch (IOException e1)
-//					{
-//						e1.printStackTrace();
-//						break;
-//					}
-//
-//					ByteArrayOutputStream out = new ByteArrayOutputStream();
-//					byte[] buf = new byte[1024];
-//					int n = 0;
-					try
-					{
-//						while (-1 != (n = in.read(buf)))
-//						{
-//							out.write(buf, 0, n);
-//						}
-//						out.close();
-//						in.close();
-//						byte[] response = out.toByteArray();
-//						InputStream bIn = new ByteArrayInputStream(response);
-					
-						System.out.println(imageURL);
-						BufferedImage sovImage = null;
-						sovImage = ImageIO.read(imageURL);
-
-						FileOutputStream fos = new FileOutputStream(
-								"C:/Users/Will/Documents/Eclipse/git/EVE SovMap Scraper/Output/" + uniqueImageCode);
-						BufferedOutputStream bos = new BufferedOutputStream(fos);
-						ImageIO.write(sovImage, "png", bos);
-						System.out.println(uniqueImageCode);
-						bos.close();
-					} catch (IOException e)
-					{
-						e.printStackTrace();
-						break;
+						writeImage(uniqueImageCode);
 					}
 				}
 			}
 		}
-}}
+	}
+
+	private String readImageFromUrl()
+	{
+		String uniqueImageCode = String.format("%04d", year) + String.format("%02d", month)
+				+ String.format("%02d", day);
+		try
+		{
+			imageURL = new URL(BASE_URL + uniqueImageCode + ".png");
+		}
+		catch (MalformedURLException e)
+		{
+			System.out.println(imageURL + " not found");
+			return null;
+		}
+
+		// System.out.println(imageURL);
+
+		try
+		{
+			sovImage = ImageIO.read(imageURL);
+		}
+		catch (IOException e)
+		{
+			System.out.println(imageURL + " could not read");
+			return null;
+		}
+
+		return uniqueImageCode;
+	}
+
+	private void writeImage(String uniqueImageCode)
+	{
+		Runnable ioTask = () ->
+		{
+			try
+			{
+				FileOutputStream fos = new FileOutputStream(
+						"C:/Users/Will/Documents/Eclipse/git/EVE SovMap Scraper/Output/" + uniqueImageCode + ".png");
+				BufferedOutputStream bos = new BufferedOutputStream(fos);
+				encoder.encode(sovImage, bos);
+				bos.close();
+				System.out.println(uniqueImageCode + ".png "
+						+ TimeUnit.MILLISECONDS.convert(getCpuTime(), TimeUnit.NANOSECONDS) + "ms");
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		};
+
+		executorService.submit(ioTask);
+	}
+
+	public void waitForImages()
+	{
+		executorService.shutdown();
+
+		try
+		{
+			executorService.awaitTermination(3, TimeUnit.HOURS);
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	public long getCpuTime()
+	{
+		ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+		return bean.isCurrentThreadCpuTimeSupported() ? bean.getCurrentThreadCpuTime() : 0L;
+	}
+}
