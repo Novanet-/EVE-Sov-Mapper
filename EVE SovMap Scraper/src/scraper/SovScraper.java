@@ -1,19 +1,13 @@
 package scraper;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +45,7 @@ public class SovScraper
 
 	private void scrapeImages() throws IOException
 	{
-		for (year = 2008; year < 2009; year++)
+		for (year = 2007; year < 2016; year++)
 		{
 			for (month = 01; month < 13; month++)
 			{
@@ -102,8 +96,7 @@ public class SovScraper
 		{
 			try
 			{
-				FileOutputStream fos = new FileOutputStream(
-						"C:/Users/Will/Documents/Eclipse/git/EVE SovMap Scraper/Output/" + uniqueImageCode + ".png");
+				FileOutputStream fos = new FileOutputStream(System.getProperty("user.dir") + "/Output/" + uniqueImageCode + ".png");
 				BufferedOutputStream bos = new BufferedOutputStream(fos);
 				encoder.encode(sovImage, bos);
 				bos.close();
